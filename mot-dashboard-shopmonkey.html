@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0a0c0f">
+<title>MOT Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0c0f;--surface:#111318;--surface2:#181c23;--border:#1e2430;--accent:#00e5b0;--accent2:#ff6b35;--accent3:#4fc3f7;--warn:#ffd54f;--danger:#ef5350;--text:#e8edf5;--muted:#5a6478;--label:#8a94a8;--glow:0 0 20px rgba(0,229,176,0.15);--nav-h:68px;--header-h:60px;--safe-bottom:env(safe-area-inset-bottom,0px);--safe-top:env(safe-area-inset-top,0px);}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);}
+.app-shell{display:flex;flex-direction:column;height:100dvh;overflow:hidden;}
+.app-header{flex-shrink:0;height:calc(var(--header-h) + var(--safe-top));padding-top:var(--safe-top);background:rgba(10,12,15,0.95);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding-left:16px;padding-right:16px;z-index:100;gap:8px;}
+.app-header-left{display:flex;flex-direction:column;gap:1px;flex-shrink:0;}
+.app-title{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:3px;line-height:1;color:var(--text);}
+.app-title span{color:var(--accent);}
+.app-subtitle{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);}
+.app-header-right{display:flex;align-items:center;gap:8px;flex-wrap:nowrap;}
+.month-pill{display:flex;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--border);border-radius:99px;padding:6px 12px;}
+.month-pill-btn{width:22px;height:22px;background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;border-radius:50%;transition:color .15s,background .15s;}
+.month-pill-btn:active{color:var(--accent);background:rgba(0,229,176,0.1);}
+.month-pill-label{font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:2px;color:var(--accent);min-width:90px;text-align:center;}
+#overallBadge{display:inline-flex;align-items:center;gap:4px;padding:5px 10px;border-radius:99px;font-size:9px;font-family:'JetBrains Mono',monospace;font-weight:700;letter-spacing:.5px;white-space:nowrap;}
+.sync-btn{display:flex;align-items:center;gap:5px;background:rgba(0,229,176,0.08);border:1px solid rgba(0,229,176,0.25);border-radius:99px;padding:6px 12px;color:var(--accent);font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1px;cursor:pointer;transition:background .2s;white-space:nowrap;flex-shrink:0;}
+.sync-btn:active{background:rgba(0,229,176,0.18);}
+.sync-btn.syncing .sync-icon{animation:spin 1s linear infinite;}
+.sync-icon{display:inline-block;font-size:12px;}
+@keyframes spin{to{transform:rotate(360deg);}}
+#syncStatusBar{display:none;border-bottom:1px solid rgba(0,229,176,0.15);padding:7px 16px;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.5px;align-items:center;gap:8px;background:rgba(0,229,176,0.06);color:var(--accent);}
+#syncStatusBar.visible{display:flex;}
+#syncStatusBar.error{background:rgba(239,83,80,0.07);border-color:rgba(239,83,80,0.2);color:var(--danger);}
+#syncStatusBar.warn{background:rgba(255,213,79,0.07);border-color:rgba(255,213,79,0.2);color:var(--warn);}
+.dots span{animation:blink 1.4s infinite;}.dots span:nth-child(2){animation-delay:.2s;}.dots span:nth-child(3){animation-delay:.4s;}
+@keyframes blink{0%,80%,100%{opacity:0}40%{opacity:1}}
+.app-content{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;}
+.screen{display:none;padding:16px 16px calc(var(--nav-h) + var(--safe-bottom) + 16px);}
+.screen.active{display:block;}
+.bottom-nav{flex-shrink:0;position:fixed;bottom:0;left:0;right:0;height:calc(var(--nav-h) + var(--safe-bottom));padding-bottom:var(--safe-bottom);background:rgba(13,15,20,0.97);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-top:1px solid var(--border);display:flex;align-items:stretch;z-index:200;}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;border:none;background:none;color:var(--muted);padding:8px 4px;transition:color .2s;position:relative;}
+.nav-item.active{color:var(--accent);}
+.nav-item.active::before{content:'';position:absolute;top:0;left:20%;right:20%;height:2px;background:var(--accent);border-radius:0 0 4px 4px;}
+.nav-icon{font-size:20px;line-height:1;transition:transform .2s;}
+.nav-item.active .nav-icon{transform:scale(1.1);}
+.nav-label{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1px;text-transform:uppercase;}
+.section-title{font-family:'Bebas Neue',sans-serif;font-size:13px;letter-spacing:3px;color:var(--muted);margin-bottom:12px;margin-top:24px;display:flex;align-items:center;gap:10px;}
+.section-title:first-child{margin-top:0;}
+.section-title::after{content:'';flex:1;height:1px;background:var(--border);}
+.days-strip{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 16px;display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;}
+.days-label{font-size:10px;text-transform:uppercase;letter-spacing:2px;color:var(--muted);font-family:'JetBrains Mono',monospace;white-space:nowrap;}
+.days-bar-wrap{flex:1;min-width:120px;}
+.days-bar-track{background:var(--border);height:6px;border-radius:99px;overflow:hidden;}
+.days-bar-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent3));border-radius:99px;transition:width .8s cubic-bezier(.34,1.56,.64,1);}
+.days-stat{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent);white-space:nowrap;}
+.days-hint{font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace;}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+.grid-4{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:space-between;animation:fadeUp .35s ease both;}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--card-accent,var(--accent));opacity:.7;}
+.card-hero{background:linear-gradient(135deg,#0f1f18 0%,#111318 100%);border-color:rgba(0,229,176,0.25);box-shadow:var(--glow);}
+.card-hero::before{opacity:1;height:3px;}
+.card-hero .card-value{color:var(--accent);}
+.card-label{font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--label);margin-bottom:6px;font-family:'JetBrains Mono',monospace;}
+.card-value{font-family:'Bebas Neue',sans-serif;font-size:clamp(18px,4vw,28px);letter-spacing:1px;color:var(--text);line-height:1;}
+.card-sub{margin-top:6px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px;}
+.card-pct{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;}
+.pct-green{color:var(--accent);}.pct-orange{color:var(--accent2);}.pct-red{color:var(--danger);}.pct-blue{color:var(--accent3);}
+.mini-bar{width:100%;height:3px;background:var(--border);border-radius:99px;margin-top:8px;overflow:hidden;}
+.mini-bar-fill{height:100%;border-radius:99px;transition:width .8s cubic-bezier(.34,1.56,.64,1);}
+.forecast-pill{font-size:9px;color:var(--accent3);background:rgba(79,195,247,0.08);border:1px solid rgba(79,195,247,0.15);border-radius:99px;padding:2px 6px;font-family:'JetBrains Mono',monospace;white-space:nowrap;}
+#revenueGrid{align-items:stretch;}
+#revenueGrid>div{display:flex;flex-direction:column;gap:12px;}
+#revenueGrid>div>.card{flex:1;display:flex;flex-direction:column;justify-content:space-between;}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:99px;font-size:9px;font-family:'JetBrains Mono',monospace;font-weight:700;letter-spacing:.5px;}
+.badge-on-track{background:rgba(0,229,176,0.1);color:var(--accent);border:1px solid rgba(0,229,176,0.2);}
+.badge-behind{background:rgba(255,107,53,0.1);color:var(--accent2);border:1px solid rgba(255,107,53,0.2);}
+.badge-at-risk{background:rgba(255,213,79,0.1);color:var(--warn);border:1px solid rgba(255,213,79,0.2);}
+.badge-exceeded{background:rgba(79,195,247,0.1);color:var(--accent3);border:1px solid rgba(79,195,247,0.2);}
+.dot{width:5px;height:5px;border-radius:50%;background:currentColor;display:inline-block;}
+.summary-table{width:100%;border-collapse:collapse;font-size:11px;}
+.summary-table th{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);padding:8px 10px;text-align:left;border-bottom:1px solid var(--border);}
+.summary-table td{padding:10px 10px;border-bottom:1px solid rgba(30,36,48,0.5);vertical-align:middle;}
+.summary-table tr:last-child td{border-bottom:none;}
+.summary-table tr:hover td{background:var(--surface2);}
+.td-label{color:var(--label);font-size:11px;}.td-val{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:11px;}.td-pct{font-family:'JetBrains Mono',monospace;font-size:10px;}
+.input-section-label{font-family:'Bebas Neue',sans-serif;font-size:11px;letter-spacing:3px;color:var(--muted);margin-bottom:10px;margin-top:20px;display:flex;align-items:center;gap:8px;}
+.input-section-label:first-child{margin-top:0;}
+.input-section-label::after{content:'';flex:1;height:1px;background:var(--border);}
+.input-group{display:flex;flex-direction:column;gap:4px;margin-bottom:10px;}
+.input-group label{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);font-family:'JetBrains Mono',monospace;}
+.input-group input{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:16px;outline:none;width:100%;transition:border-color .2s;-webkit-appearance:none;}
+.input-group input:focus{border-color:var(--accent);}
+.input-group input::placeholder{color:var(--muted);}
+.input-2col{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.action-row{display:flex;gap:10px;margin-top:20px;}
+.btn-calc{flex:2;background:linear-gradient(135deg,var(--accent),#00c49a);border:none;border-radius:12px;color:#0a0c0f;font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:2px;padding:14px;cursor:pointer;transition:opacity .2s,transform .1s;}
+.btn-calc:active{transform:scale(.97);opacity:.9;}
+.btn-save{flex:1;background:var(--surface2);border:1px solid var(--accent);border-radius:12px;color:var(--accent);font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:2px;padding:14px 10px;cursor:pointer;transition:background .2s,transform .1s;}
+.btn-save:active{transform:scale(.97);background:rgba(0,229,176,0.1);}
+.btn-clear{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:12px;color:var(--muted);font-family:'Bebas Neue',sans-serif;font-size:13px;letter-spacing:1px;padding:14px 10px;cursor:pointer;transition:border-color .2s,color .2s;}
+.btn-clear:active{border-color:var(--danger);color:var(--danger);}
+#saveStatus{text-align:center;margin-top:10px;font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--muted);min-height:14px;}
+
+/* SHOPMONKEY CARD */
+.sm-card{background:linear-gradient(135deg,#0f1a15,#111318);border:1px solid rgba(0,229,176,0.2);border-radius:14px;padding:16px;margin-bottom:12px;}
+.sm-card-title{font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:2px;color:var(--accent);margin-bottom:4px;display:flex;align-items:center;gap:8px;}
+.sm-card-sub{font-size:9px;font-family:'JetBrains Mono',monospace;color:var(--muted);letter-spacing:.5px;margin-bottom:14px;}
+.sm-connected-badge{display:none;align-items:center;gap:5px;background:rgba(0,229,176,0.08);border:1px solid rgba(0,229,176,0.2);border-radius:99px;padding:4px 10px;font-size:9px;font-family:'JetBrains Mono',monospace;color:var(--accent);margin-bottom:12px;}
+.sm-pulse{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.sm-field-row{display:flex;flex-direction:column;gap:4px;margin-bottom:12px;}
+.sm-field-label{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);font-family:'JetBrains Mono',monospace;}
+.sm-field-input{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:11px;outline:none;width:100%;transition:border-color .2s;-webkit-appearance:none;}
+.sm-field-input:focus{border-color:var(--accent);}
+.sm-field-input::placeholder{color:var(--muted);font-size:10px;}
+.sm-sync-btn{width:100%;background:linear-gradient(135deg,var(--accent),#00c49a);border:none;border-radius:10px;color:#0a0c0f;font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:2px;padding:13px;cursor:pointer;transition:opacity .2s,transform .1s;margin-top:4px;}
+.sm-sync-btn:active{transform:scale(.97);opacity:.9;}
+.sm-result{margin-top:10px;font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--muted);min-height:14px;text-align:center;}
+.sm-last-sync{font-size:9px;color:var(--muted);font-family:'JetBrains Mono',monospace;text-align:center;margin-top:6px;}
+
+/* CORS WARNING CARD */
+.cors-notice{background:rgba(255,213,79,0.05);border:1px solid rgba(255,213,79,0.2);border-radius:12px;padding:14px;margin-bottom:14px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--warn);line-height:1.6;display:none;}
+.cors-notice.visible{display:block;}
+.cors-notice strong{display:block;font-size:11px;margin-bottom:6px;letter-spacing:1px;}
+.cors-notice code{background:rgba(255,213,79,0.1);border-radius:4px;padding:1px 5px;font-size:10px;}
+
+/* DAILY */
+.daily-hero{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;}
+.daily-big-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;position:relative;overflow:hidden;text-align:center;}
+.daily-big-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--card-top,var(--accent));}
+.daily-big-card.highlight{background:linear-gradient(135deg,#0f1f18,#111318);border-color:rgba(0,229,176,0.3);box-shadow:var(--glow);}
+.dbc-label{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-bottom:6px;}
+.dbc-value{font-family:'Bebas Neue',sans-serif;font-size:clamp(20px,5vw,30px);letter-spacing:1px;color:var(--text);line-height:1;}
+.dbc-sub{margin-top:6px;font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--label);}
+.chart-wrap{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:16px;}
+.chart-title{font-family:'Bebas Neue',sans-serif;font-size:12px;letter-spacing:3px;color:var(--muted);margin-bottom:14px;}
+.bar-chart-container{overflow-x:auto;padding-bottom:24px;}
+.bar-chart{display:flex;align-items:flex-end;gap:3px;height:110px;min-width:500px;}
+.bar-col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;position:relative;}
+.bar-budget{width:100%;background:rgba(79,195,247,0.15);border-radius:3px 3px 0 0;position:absolute;bottom:0;border:1px solid rgba(79,195,247,0.25);}
+.bar-actual{width:60%;border-radius:3px 3px 0 0;position:absolute;bottom:0;left:20%;transition:height .6s cubic-bezier(.34,1.56,.64,1);}
+.bar-day-label{position:absolute;bottom:-18px;font-size:8px;color:var(--muted);font-family:'JetBrains Mono',monospace;}
+.chart-legend{display:flex;gap:14px;margin-top:4px;flex-wrap:wrap;}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:9px;font-family:'JetBrains Mono',monospace;color:var(--label);}
+.legend-dot{width:8px;height:8px;border-radius:2px;}
+.daily-table{width:100%;border-collapse:collapse;font-size:11px;}
+.daily-table th{font-family:'JetBrains Mono',monospace;font-size:8px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);padding:8px 8px;text-align:left;border-bottom:1px solid var(--border);}
+.daily-table td{padding:9px 8px;border-bottom:1px solid rgba(30,36,48,0.5);font-family:'JetBrains Mono',monospace;font-size:10px;vertical-align:middle;}
+.daily-table tr:last-child td{border-bottom:none;}
+.daily-table tr:hover td{background:var(--surface2);}
+.daily-table .today-row td{background:rgba(0,229,176,0.04);}
+.pace-bar-wrap{width:50px;}
+.pace-bar-track{height:3px;background:var(--border);border-radius:99px;overflow:hidden;}
+.pace-bar-fill{height:100%;border-radius:99px;}
+.settings-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:12px;}
+.settings-card-title{font-family:'Bebas Neue',sans-serif;font-size:13px;letter-spacing:2px;color:var(--label);margin-bottom:12px;}
+.settings-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(30,36,48,0.5);}
+.settings-row:last-child{border-bottom:none;}
+.settings-row-label{font-size:13px;color:var(--text);}
+.settings-row-val{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent);}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.screen.active .card,.screen.active .days-strip,.screen.active .settings-card,.screen.active .chart-wrap,.screen.active .daily-big-card{animation:fadeUp .3s ease both;}
+.app-content::-webkit-scrollbar{display:none;}
+.app-content{scrollbar-width:none;}
+.bar-chart-container::-webkit-scrollbar{height:3px;}
+.bar-chart-container::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+</style>
+</head>
+<body>
+<div class="app-shell">
+
+<header class="app-header">
+  <div class="app-header-left">
+    <div class="app-title">MOT <span>DASH</span></div>
+    <div class="app-subtitle">Service Dept · Performance</div>
+  </div>
+  <div class="app-header-right">
+    <button class="sync-btn" id="syncBtn" onclick="syncFromShopMonkey()">
+      <span class="sync-icon">&#9651;</span>
+      <span id="syncBtnLabel">SYNC SM</span>
+    </button>
+    <div class="month-pill">
+      <button class="month-pill-btn" onclick="changeMonth(-1)">&#8249;</button>
+      <div class="month-pill-label" id="monthDisplay">MAY 2026</div>
+      <button class="month-pill-btn" onclick="changeMonth(1)">&#8250;</button>
+    </div>
+    <div id="overallBadge" class="badge badge-on-track"><span class="dot"></span> ON TRACK</div>
+  </div>
+</header>
+
+<div id="syncStatusBar">
+  <span id="syncStatusMsg">Connecting</span>
+  <span class="dots" id="syncDots"><span>.</span><span>.</span><span>.</span></span>
+</div>
+
+<div class="app-content">
+
+  <!-- OVERVIEW -->
+  <div class="screen active" id="screen-overview">
+    <div class="days-strip" style="margin-top:4px;">
+      <span class="days-label">Progress</span>
+      <div class="days-bar-wrap"><div class="days-bar-track"><div class="days-bar-fill" id="daysBarFill" style="width:0%"></div></div></div>
+      <span class="days-stat" id="daysStatText">0 / 0 days</span>
+      <span class="days-hint" id="daysHint"></span>
+    </div>
+    <div class="section-title">Revenue Performance</div>
+    <div class="grid-2" id="revenueGrid"></div>
+    <div class="section-title">Car Count</div>
+    <div class="grid-3" id="carCountGrid"></div>
+    <div class="section-title">Avg Repair Order</div>
+    <div class="grid-2" id="aroGrid"></div>
+    <div class="section-title">Labour &amp; Hours</div>
+    <div class="grid-4" id="hoursGrid"></div>
+    <div class="section-title">Full Summary</div>
+    <div class="card" style="padding:0;overflow:hidden;">
+      <table class="summary-table">
+        <thead><tr><th>Metric</th><th>Budget</th><th>Actual</th><th>Forecast</th><th>vs Bud%</th><th>Status</th></tr></thead>
+        <tbody id="summaryBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- DAILY -->
+  <div class="screen" id="screen-daily">
+    <div class="daily-hero" id="dailyHero" style="margin-top:4px;"></div>
+    <div class="chart-wrap">
+      <div class="chart-title">Daily Revenue · Actual vs Budget</div>
+      <div class="bar-chart-container"><div class="bar-chart" id="dailyBarChart"></div></div>
+      <div class="chart-legend">
+        <div class="legend-item"><div class="legend-dot" style="background:rgba(79,195,247,0.4)"></div> Budget/day</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--accent)"></div> Actual avg</div>
+        <div class="legend-item"><div class="legend-dot" style="background:rgba(0,229,176,0.15);border:1px dashed var(--accent)"></div> Required</div>
+      </div>
+    </div>
+    <div class="section-title">Day-by-Day</div>
+    <div class="card" style="padding:0;overflow:hidden;">
+      <table class="daily-table">
+        <thead><tr><th>Day</th><th>Cum. Budget</th><th>Cum. Actual</th><th>Avg/Day</th><th>vs Budget</th><th>Pace</th></tr></thead>
+        <tbody id="dailyTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- INPUTS -->
+  <div class="screen" id="screen-inputs">
+    <div style="margin-top:4px;">
+      <div class="input-section-label">Revenue</div>
+      <div class="input-2col">
+        <div class="input-group"><label>Revenue Budget ($)</label><input id="revBudget" type="number" min="0" placeholder="91602" oninput="updateDaysBar()"></div>
+        <div class="input-group"><label>Revenue Generated ($)</label><input id="revActual" type="number" min="0" placeholder="0" oninput="updateDaysBar()"></div>
+      </div>
+      <div class="input-section-label">Working Days</div>
+      <div class="input-2col">
+        <div class="input-group"><label>Days in Month</label><input id="workDays" type="number" min="0" placeholder="25" oninput="updateDaysBar()"></div>
+        <div class="input-group"><label>Days Elapsed</label><input id="daysElapsed" type="number" min="0" placeholder="4" oninput="updateDaysBar()"></div>
+      </div>
+      <div class="input-section-label">Car Count</div>
+      <div class="input-2col">
+        <div class="input-group"><label>Car Count Budget</label><input id="carBudget" type="number" min="0" placeholder="225"></div>
+        <div class="input-group"><label>Actual Car Count</label><input id="carActual" type="number" min="0" placeholder="0"></div>
+      </div>
+      <div class="input-section-label">Avg Repair Order</div>
+      <div class="input-2col">
+        <div class="input-group"><label>ARO Budget ($)</label><input id="aroBudget" type="number" min="0" placeholder="493"></div>
+        <div class="input-group"><label>Actual ARO ($)</label><input id="aroActual" type="number" min="0" placeholder="0"></div>
+      </div>
+      <div class="input-section-label">Labour &amp; Hours</div>
+      <div class="input-2col">
+        <div class="input-group"><label>Budgeted Hours</label><input id="budgetHours" type="number" min="0" placeholder="0"></div>
+        <div class="input-group"><label>Hours Worked</label><input id="actualHours" type="number" min="0" placeholder="0"></div>
+        <div class="input-group"><label>Hours Invoiced</label><input id="invoicedHours" type="number" min="0" placeholder="0"></div>
+        <div class="input-group"><label>Total Labour Cost ($)</label><input id="labourCost" type="number" min="0" placeholder="0"></div>
+      </div>
+      <div class="action-row">
+        <button class="btn-calc" onclick="calculate();navTo('overview')">&#9654; CALCULATE</button>
+        <button class="btn-save" id="saveBtn" onclick="saveData()">&#128190; SAVE</button>
+        <button class="btn-clear" onclick="clearSaved()">&#10005;</button>
+      </div>
+      <div id="saveStatus"></div>
+    </div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div class="screen" id="screen-settings">
+    <div style="margin-top:4px;">
+
+      <!-- CORS notice -->
+      <div class="cors-notice" id="corsNotice">
+        <strong>&#9888; CORS RESTRICTION DETECTED</strong>
+        ShopMonkey's API doesn't allow direct browser calls from local files or non-whitelisted origins. To sync, open this file from a web server, or use one of these options:<br><br>
+        <strong>Option A — Python (easiest):</strong><br>
+        <code>python3 -m http.server 8080</code><br>
+        Then open <code>http://localhost:8080</code> in your browser.<br><br>
+        <strong>Option B — VS Code Live Server extension</strong><br>
+        Right-click the HTML file → "Open with Live Server"<br><br>
+        <strong>Option C — Enter data manually</strong><br>
+        Use the Inputs tab to enter your figures directly.
+      </div>
+
+      <!-- SHOPMONKEY -->
+      <div class="sm-card">
+        <div class="sm-card-title">&#11042; ShopMonkey</div>
+        <div class="sm-card-sub">API v3 · auto-syncs revenue, cars, labour &amp; hours</div>
+        <div class="sm-connected-badge" id="smConnectedBadge">
+          <span class="sm-pulse"></span> CONNECTED
+        </div>
+        <div class="sm-field-row">
+          <div class="sm-field-label">API Token</div>
+          <input class="sm-field-input" id="smApiToken" type="password" placeholder="Paste JWT token…">
+        </div>
+        <div class="sm-field-row">
+          <div class="sm-field-label">Location ID (auto-detected from token if blank)</div>
+          <input class="sm-field-input" id="smLocationId" type="text" placeholder="357cc41e-a146-45b3-…">
+        </div>
+        <button class="sm-sync-btn" onclick="syncFromShopMonkey()">&#9651; SYNC FROM SHOPMONKEY</button>
+        <div class="sm-result" id="smResult"></div>
+        <div class="sm-last-sync" id="smLastSync"></div>
+      </div>
+
+      <div class="settings-card">
+        <div class="settings-card-title">Current Month</div>
+        <div class="settings-row"><span class="settings-row-label">Period</span><span class="settings-row-val" id="settingsMonth">—</span></div>
+        <div class="settings-row"><span class="settings-row-label">Working Days</span><span class="settings-row-val" id="settingsWorkDays">—</span></div>
+        <div class="settings-row"><span class="settings-row-label">Days Elapsed</span><span class="settings-row-val" id="settingsElapsed">—</span></div>
+        <div class="settings-row"><span class="settings-row-label">Days Remaining</span><span class="settings-row-val" id="settingsRemaining">—</span></div>
+      </div>
+
+      <div class="settings-card">
+        <div class="settings-card-title">Presets (May 2026)</div>
+        <div class="settings-row"><span class="settings-row-label">Revenue Budget</span><span class="settings-row-val">$91,602</span></div>
+        <div class="settings-row"><span class="settings-row-label">Car Count Budget</span><span class="settings-row-val">225</span></div>
+        <div class="settings-row"><span class="settings-row-label">ARO Budget</span><span class="settings-row-val">$493</span></div>
+        <div class="settings-row"><span class="settings-row-label">Working Days</span><span class="settings-row-val">25</span></div>
+      </div>
+
+      <div class="settings-card">
+        <div class="settings-card-title">Data &amp; Storage</div>
+        <div class="settings-row"><span class="settings-row-label">Last Saved</span><span class="settings-row-val" id="settingsLastSaved">—</span></div>
+        <div class="settings-row" style="margin-top:8px;">
+          <button onclick="saveData()" style="flex:1;background:rgba(0,229,176,0.1);border:1px solid rgba(0,229,176,0.3);color:var(--accent);border-radius:10px;padding:10px;font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:2px;cursor:pointer;width:100%;">&#128190; SAVE NOW</button>
+        </div>
+        <div class="settings-row" style="border-bottom:none;">
+          <button onclick="clearSaved()" style="background:rgba(239,83,80,0.07);border:1px solid rgba(239,83,80,0.2);color:var(--danger);border-radius:10px;padding:10px;font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:2px;cursor:pointer;width:100%;">&#10005; CLEAR DATA</button>
+        </div>
+      </div>
+
+      <div class="settings-card">
+        <div class="settings-card-title">About</div>
+        <div class="settings-row"><span class="settings-row-label">Version</span><span class="settings-row-val">MOT Dash v3 + SM</span></div>
+        <div class="settings-row"><span class="settings-row-label">Last Calculated</span><span class="settings-row-val" id="lastCalc">—</span></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<nav class="bottom-nav">
+  <button class="nav-item active" id="nav-overview" onclick="navTo('overview')"><span class="nav-icon">&#9672;</span><span class="nav-label">Overview</span></button>
+  <button class="nav-item" id="nav-daily" onclick="navTo('daily')"><span class="nav-icon">&#9650;</span><span class="nav-label">Daily</span></button>
+  <button class="nav-item" id="nav-inputs" onclick="navTo('inputs')"><span class="nav-icon">&#8862;</span><span class="nav-label">Inputs</span></button>
+  <button class="nav-item" id="nav-settings" onclick="navTo('settings')"><span class="nav-icon">&#9678;</span><span class="nav-label">Settings</span></button>
+</nav>
+</div>
+
+<script>
+// ── SHOPMONKEY ────────────────────────────────────────────────────────────
+const SM_BASE = 'https://api.shopmonkey.cloud/v3';
+const SM_DEFAULT_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjaWQiOiI3MjEwY2Y5Yy0wOTVhLTQ1MTItOTQyZS05Mjk0ZjVhNGY1ZjIiLCJpZCI6ImMyNjA2ODhmLTRlY2UtNDA1Ny1hNzkwLTVhOGNkMGI4ZDE0ZSIsImxpZCI6IjM1N2NjNDFlLWExNDYtNDViMy05YTZjLTE1ZTQzMjlkZjBmZCIsInAiOiJhcGkiLCJyaWQiOiJ1YzEiLCJzYWQiOjAsInNpZCI6IjI4YThlMjRiNTgzNDJhNWMiLCJ0Y2lkIjoiNzIxMGNmOWMtMDk1YS00NTEyLTk0MmUtOTI5NGY1YTRmNWYyIiwiZGF0YVNoYXJpbmciOmZhbHNlLCJoYXNIcSI6ZmFsc2UsIm9uYiI6NywicGF5IjozLCJhdWQiOiJhcGkiLCJpc3MiOiJodHRwczovL2FwaS5zaG9wbW9ua2V5LmNsb3VkIiwiaWF0IjoxNzc4MzcwOTgzLCJleHAiOjQ5MzQxMzA5ODN9.mQ92QvL_5MTgc3c5rmRaDUGygaxv7csJeVNCjcPxhW4';
+const TK_KEY = 'motDash_smToken';
+const LC_KEY = 'motDash_smLoc';
+const SAVE_KEY = 'motDashboard_v3';
+
+function jwtClaims(token) { try { return JSON.parse(atob(token.split('.')[1])); } catch(e) { return {}; } }
+function getToken() { return (document.getElementById('smApiToken')?.value||'').trim() || localStorage.getItem(TK_KEY) || SM_DEFAULT_TOKEN; }
+function getLocId() {
+  const m = (document.getElementById('smLocationId')?.value||'').trim();
+  if(m) return m;
+  const s = localStorage.getItem(LC_KEY)||'';
+  if(s) return s;
+  return jwtClaims(getToken()).lid || null;
+}
+
+// Status bar
+function setSyncBar(msg, type='info', dots=true) {
+  const bar = document.getElementById('syncStatusBar');
+  const msgEl = document.getElementById('syncStatusMsg');
+  const dotsEl = document.getElementById('syncDots');
+  bar.className = 'visible' + (type === 'error' ? ' error' : type === 'warn' ? ' warn' : '');
+  msgEl.textContent = msg;
+  dotsEl.style.display = dots ? '' : 'none';
+}
+function clearBar(ms=3000) { setTimeout(() => { document.getElementById('syncStatusBar').className = ''; }, ms); }
+
+// ── MAIN SYNC FUNCTION ───────────────────────────────────────────────────
+async function syncFromShopMonkey() {
+  const btn = document.getElementById('syncBtn');
+  const lbl = document.getElementById('syncBtnLabel');
+  btn.classList.add('syncing'); lbl.textContent = 'SYNCING';
+
+  try {
+    const token = getToken();
+    const locId = getLocId();
+    const monthStart = new Date(currentYear, currentMonth, 1);
+    const monthEnd   = new Date(currentYear, currentMonth + 1, 0, 23, 59, 59);
+
+    // ── Step 1: Test connectivity with /v3/user/me ───────────────
+    setSyncBar('Authenticating…', 'info', true);
+    let meRes;
+    try {
+      meRes = await fetch(`${SM_BASE}/user/me`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+    } catch(netErr) {
+      // Network error = likely CORS
+      showCorsNotice();
+      throw new Error('Network blocked (CORS). See Settings → ShopMonkey for fix.');
+    }
+    if(meRes.status === 401) throw new Error('Invalid token — check your API key in Settings.');
+    if(!meRes.ok) throw new Error(`Auth failed (${meRes.status})`);
+
+    // ── Step 2: Fetch orders with correct endpoint /v3/order ─────
+    setSyncBar('Fetching orders…', 'info', true);
+    const startISO = monthStart.toISOString();
+    const endISO   = monthEnd.toISOString();
+
+    // Build query — ShopMonkey uses createdDate for order filtering
+    const qp = new URLSearchParams({
+      limit: '500',
+      'filter[createdDate][$gte]': startISO,
+      'filter[createdDate][$lte]': endISO,
+    });
+    if(locId) qp.set('filter[locationId]', locId);
+
+    const ordRes = await fetch(`${SM_BASE}/order?${qp}`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if(!ordRes.ok) {
+      const errTxt = await ordRes.text().catch(()=>'');
+      throw new Error(`Orders API ${ordRes.status}: ${errTxt.slice(0,100)}`);
+    }
+    const ordData = await ordRes.json();
+    const orders  = ordData.data || [];
+
+    // ── Step 3: Tally metrics ────────────────────────────────────
+    setSyncBar(`Processing ${orders.length} orders…`, 'info', true);
+
+    let totalRevCents = 0, totalLabourCents = 0;
+    let totalHoursWorked = 0, totalHoursInvoiced = 0;
+    let carCount = 0;
+
+    orders.forEach(o => {
+      if(o.deleted) return;
+      carCount++;
+
+      // Revenue: grandTotal is in CENTS in ShopMonkey v3
+      const status = (o.workflowStatusId || o.workflowStatus || '').toLowerCase();
+      // Count revenue from non-draft / non-estimate orders
+      // ShopMonkey: totalCents field (in cents)
+      const grandCents = parseInt(o.totalCents || o.grandTotalCents || 0, 10);
+      totalRevCents += grandCents;
+
+      // Labour from services array
+      const services = o.services || [];
+      services.forEach(svc => {
+        // laborCostCents in cents
+        const labCents = parseInt(svc.laborCostCents || svc.labourCostCents || 0, 10);
+        totalLabourCents += labCents;
+
+        // Hours: stored as decimal hours
+        const hw = parseFloat(svc.laborHours || svc.labourHours || svc.hours || 0);
+        const hi = parseFloat(svc.invoicedHours || svc.laborHours || svc.labourHours || 0);
+        if(!isNaN(hw)) totalHoursWorked += hw;
+        if(!isNaN(hi)) totalHoursInvoiced += hi;
+      });
+    });
+
+    // Convert cents → dollars
+    const totalRevenue    = totalRevCents / 100;
+    const totalLabourCost = totalLabourCents / 100;
+
+    // ── Step 4: Fetch timeclock (optional) ───────────────────────
+    try {
+      setSyncBar('Fetching time clock…', 'info', true);
+      const tcQp = new URLSearchParams({ limit: '500', 'filter[clockIn][$gte]': startISO, 'filter[clockIn][$lte]': endISO });
+      if(locId) tcQp.set('filter[locationId]', locId);
+      const tcRes = await fetch(`${SM_BASE}/timeclock?${tcQp}`, { headers: { 'Authorization': `Bearer ${token}` } });
+      if(tcRes.ok) {
+        const tcData = await tcRes.json();
+        const entries = tcData.data || [];
+        if(entries.length > 0) {
+          let tcHours = 0;
+          entries.forEach(e => { tcHours += parseFloat(e.hoursWorked || e.hours || e.durationHours || 0); });
+          if(tcHours > 0) totalHoursWorked = tcHours;
+        }
+      }
+    } catch(e) { /* timeclock optional */ }
+
+    // ── Step 5: Working days ─────────────────────────────────────
+    const today = new Date();
+    let workingDays = 0, daysElapsed = 0;
+    const cur = new Date(monthStart);
+    while(cur <= monthEnd) {
+      if(cur.getDay() !== 0) { // exclude Sundays
+        workingDays++;
+        if(cur <= today && cur.getMonth() === currentMonth && cur.getFullYear() === currentYear) daysElapsed++;
+      }
+      cur.setDate(cur.getDate() + 1);
+    }
+
+    // ── Step 6: Populate fields ──────────────────────────────────
+    const aroActual = carCount > 0 ? totalRevenue / carCount : 0;
+    setField('revActual',    totalRevenue.toFixed(2));
+    setField('carActual',    carCount);
+    setField('aroActual',    aroActual.toFixed(2));
+    setField('actualHours',  totalHoursWorked.toFixed(1));
+    setField('invoicedHours',totalHoursInvoiced.toFixed(1));
+    setField('labourCost',   totalLabourCost.toFixed(2));
+    setField('workDays',     workingDays);
+    setField('daysElapsed',  daysElapsed);
+
+    // Save token
+    localStorage.setItem(TK_KEY, token);
+    if(locId) localStorage.setItem(LC_KEY, locId);
+    const nowStr = new Date().toLocaleString();
+    localStorage.setItem('smLastSync', nowStr);
+
+    // Update UI
+    document.getElementById('smConnectedBadge').style.display = 'inline-flex';
+    document.getElementById('smResult').innerHTML = `<span style="color:var(--accent)">&#10003; ${orders.length} orders · ${carCount} cars · ${fmt$(totalRevenue)}</span>`;
+    document.getElementById('smLastSync').textContent = 'Last sync: ' + nowStr;
+    document.getElementById('corsNotice').classList.remove('visible');
+
+    setSyncBar(`&#10003; Synced ${orders.length} orders · ${carCount} cars · ${fmt$(totalRevenue)}`, 'info', false);
+    clearBar(4000);
+    calculate();
+    navTo('overview');
+
+  } catch(err) {
+    console.error('ShopMonkey sync failed:', err);
+    setSyncBar('&#9888; ' + err.message, 'error', false);
+    clearBar(8000);
+    document.getElementById('smResult').innerHTML = `<span style="color:var(--danger)">&#9888; ${err.message}</span>`;
+  } finally {
+    btn.classList.remove('syncing');
+    lbl.textContent = 'SYNC SM';
+  }
+}
+
+function showCorsNotice() {
+  document.getElementById('corsNotice').classList.add('visible');
+  navTo('settings');
+}
+
+function setField(id, value) {
+  const el = document.getElementById(id);
+  if(!el) return;
+  el.value = value;
+  el.style.borderColor = 'rgba(0,229,176,0.6)';
+  setTimeout(() => el.style.borderColor = '', 2000);
+}
+
+// ── STATE ────────────────────────────────────────────────────────────────
+let currentDate = new Date(), currentYear = currentDate.getFullYear(), currentMonth = currentDate.getMonth();
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+function navTo(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  document.getElementById('screen-'+id).classList.add('active');
+  document.getElementById('nav-'+id).classList.add('active');
+  document.querySelector('.app-content').scrollTop = 0;
+  if(id === 'settings') updateSettingsScreen();
+}
+
+const fmt$ = v => { if(isNaN(v)||!isFinite(v)) return '$0.00'; return new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',minimumFractionDigits:2,maximumFractionDigits:2}).format(v); };
+const fmtN = (v,d=0) => { if(isNaN(v)||!isFinite(v)) return '0'; return new Intl.NumberFormat('en-US',{minimumFractionDigits:d,maximumFractionDigits:d}).format(v); };
+const fmtPct = v => { if(isNaN(v)||!isFinite(v)) return '0.0%'; return (v>=0?'+':'')+v.toFixed(1)+'%'; };
+const pctClass = (v,inv=false) => { if(inv){if(v>10)return 'pct-red';if(v>0)return 'pct-orange';return 'pct-green';}if(v>=5)return 'pct-green';if(v>=-5)return 'pct-orange';return 'pct-red'; };
+const statusBadge = p => { if(p>=5) return `<span class="badge badge-exceeded"><span class="dot"></span> EXCEEDED</span>`; if(p>=-5) return `<span class="badge badge-on-track"><span class="dot"></span> ON TRACK</span>`; if(p>=-15) return `<span class="badge badge-at-risk"><span class="dot"></span> AT RISK</span>`; return `<span class="badge badge-behind"><span class="dot"></span> BEHIND</span>`; };
+const getVal = id => parseFloat(document.getElementById(id)?.value||0)||0;
+
+function changeMonth(dir) {
+  currentMonth += dir;
+  if(currentMonth>11){currentMonth=0;currentYear++;}
+  if(currentMonth<0){currentMonth=11;currentYear--;}
+  document.getElementById('monthDisplay').textContent = `${MONTHS[currentMonth].slice(0,3).toUpperCase()} ${currentYear}`;
+  updateDaysBar();
+}
+function updateDaysBar() {
+  const days=getVal('workDays')||25, el=getVal('daysElapsed')||0;
+  const pct=days>0?Math.min(100,(el/days)*100):0;
+  document.getElementById('daysBarFill').style.width=pct+'%';
+  document.getElementById('daysStatText').textContent=`${el}/${days} days (${pct.toFixed(0)}%)`;
+  document.getElementById('daysHint').textContent=(days-el)>0?`${days-el} left`:'Complete';
+}
+function saveData() {
+  const ids=['revBudget','revActual','workDays','daysElapsed','carBudget','carActual','aroBudget','aroActual','budgetHours','actualHours','invoicedHours','labourCost'];
+  const data={_savedAt:new Date().toISOString(),_month:currentMonth,_year:currentYear};
+  ids.forEach(id=>{const e=document.getElementById(id);if(e)data[id]=e.value;});
+  const tk=document.getElementById('smApiToken'), lc=document.getElementById('smLocationId');
+  if(tk?.value) localStorage.setItem(TK_KEY,tk.value);
+  if(lc) localStorage.setItem(LC_KEY,lc.value);
+  try{localStorage.setItem(SAVE_KEY,JSON.stringify(data));showStatus('Saved','var(--accent)');}catch(e){showStatus('Save failed','var(--danger)');}
+  const btn=document.getElementById('saveBtn');
+  btn.textContent='SAVED';btn.style.borderColor='var(--accent)';
+  setTimeout(()=>{btn.textContent='SAVE';btn.style.borderColor='';},2000);
+}
+function loadData(){try{const r=localStorage.getItem(SAVE_KEY);return r?JSON.parse(r):null;}catch{return null;}}
+function clearSaved(){if(!confirm('Clear saved data?'))return;localStorage.removeItem(SAVE_KEY);setDefaults(true);calculate();showStatus('Cleared','var(--accent2)');}
+function showStatus(msg,color){const e=document.getElementById('saveStatus');if(!e)return;e.innerHTML=msg;e.style.color=color;clearTimeout(e._t);e._t=setTimeout(()=>e.innerHTML='',3000);}
+function setDefaults(force=false){
+  const def={revBudget:91602,revActual:0,workDays:25,daysElapsed:4,carBudget:225,carActual:0,aroBudget:493,aroActual:0,budgetHours:0,actualHours:0,invoicedHours:0,labourCost:0};
+  const saved=force?null:loadData(), src=saved||def;
+  Object.entries(src).forEach(([k,v])=>{const e=document.getElementById(k);if(e)e.value=v;});
+  if(saved&&saved._month!==undefined){currentMonth=saved._month;currentYear=saved._year||currentYear;}
+  const tk=localStorage.getItem(TK_KEY)||SM_DEFAULT_TOKEN;
+  const lc=localStorage.getItem(LC_KEY)||'';
+  const tkEl=document.getElementById('smApiToken'),lcEl=document.getElementById('smLocationId');
+  if(tkEl)tkEl.value=tk;if(lcEl)lcEl.value=lc;
+  updateDaysBar();
+}
+function buildCard(label,value,pct,barPct,barColor,extra='',accent='var(--accent)',hero=''){
+  const c=Math.min(100,Math.max(0,barPct||0));
+  return `<div class="card ${hero}" style="--card-accent:${accent}"><div><div class="card-label">${label}</div><div class="card-value">${value}</div><div class="card-sub"><span class="card-pct ${pct.cls}">${pct.txt}</span>${extra}</div></div><div class="mini-bar"><div class="mini-bar-fill" style="width:${c}%;background:${barColor}"></div></div></div>`;
+}
+function calculate(){
+  const rb=getVal('revBudget'),ra=getVal('revActual'),wd=getVal('workDays'),de=getVal('daysElapsed');
+  const cb=getVal('carBudget'),ca=getVal('carActual'),arob=getVal('aroBudget'),aroa=getVal('aroActual');
+  const bh=getVal('budgetHours'),ah=getVal('actualHours'),ih=getVal('invoicedHours'),lc=getVal('labourCost');
+  const dr=wd-de; updateDaysBar();
+  const rdb=wd>0?rb/wd:0,rda=de>0?ra/de:0,rf=de>0?rda*wd:0;
+  const rvb$=ra-rb,rvbP=rb>0?((ra-rb)/rb)*100:0,rfP=rb>0?((rf-rb)/rb)*100:0;
+  const rdr=dr>0?(rb-ra)/dr:0,rpP=rb>0?(ra/rb)*100:0,dvbP=rdb>0?((rda-rdb)/rdb)*100:0;
+  const cf=de>0?(ca/de)*wd:0,cvb$=ca-cb,cvbP=cb>0?((ca-cb)/cb)*100:0,cfP=cb>0?((cf-cb)/cb)*100:0,cpP=cb>0?(ca/cb)*100:0;
+  const avb$=aroa-arob,avbP=arob>0?((aroa-arob)/arob)*100:0,apP=arob>0?(aroa/arob)*100:0;
+  const hvb$=ah-bh,hvbP=bh>0?((ah-bh)/bh)*100:0,hiP=ah>0?(ih/ah)*100:0,eP=bh>0?(ah/bh)*100:0;
+  const ahr=ih>0?ra/ih:0,br=bh>0?rb/bh:0,rvbr$=ahr-br,rvbrP=br>0?((ahr-br)/br)*100:0;
+
+  const fp='<span class="forecast-pill">';
+  const revL=[
+    buildCard('Revenue Budget',fmt$(rb),{txt:'100% Target',cls:'pct-blue'},100,'var(--accent3)','','var(--accent3)'),
+    buildCard('Revenue Forecast (EOM)',fmt$(rf),{txt:fmtPct(rfP)+' vs Budget',cls:pctClass(rfP)},Math.min(100,(rf/rb)*100),'#4fc3f7',fp+fmt$(rf-rb)+'</span>','#4fc3f7'),
+    buildCard('Avg Daily Budget',fmt$(rdb),{txt:'Per Working Day',cls:'pct-blue'},100,'var(--accent3)','','var(--accent3)'),
+  ].join('');
+  const revR=[
+    buildCard('Revenue Generated',fmt$(ra),{txt:fmtPct(rvbP)+' vs Budget',cls:pctClass(rvbP)},rpP,'var(--accent)',fp+fmtPct(rvbP)+' ('+fmt$(rvb$)+')</span>','var(--accent)',rpP>=95?'card-hero':''),
+    buildCard('Daily Required (EOM)',fmt$(rdr>0?rdr:0),{txt:`Over ${dr} remaining days`,cls:rdr>rdb*1.5?'pct-red':'pct-orange'},rdr>0?Math.min(100,(rdb/rdr)*100):0,rdr>rdb*1.3?'var(--danger)':'var(--warn)','',rdr>rdb*1.3?'var(--danger)':'var(--warn)'),
+    buildCard('Avg Daily Generated',fmt$(rda),{txt:fmtPct(dvbP)+' vs Daily Budget',cls:pctClass(dvbP)},Math.min(130,rdb>0?(rda/rdb)*100:0),rda>=rdb?'var(--accent)':'var(--accent2)',fp+(rda>=rdb?'+':'')+fmt$(rda-rdb)+'/day</span>',rda>=rdb?'var(--accent)':'var(--accent2)',rda>=rdb?'card-hero':''),
+  ].join('');
+  document.getElementById('revenueGrid').innerHTML=`<div style="display:flex;flex-direction:column;gap:12px;flex:1">${revL}</div><div style="display:flex;flex-direction:column;gap:12px;flex:1">${revR}</div>`;
+
+  document.getElementById('carCountGrid').innerHTML=[
+    buildCard('Car Count Budget',fmtN(cb),{txt:'100% Target',cls:'pct-blue'},100,'var(--accent3)','','var(--accent3)'),
+    buildCard('Actual Car Count',fmtN(ca),{txt:fmtPct(cvbP)+' vs Budget',cls:pctClass(cvbP)},cpP,'var(--accent)',fp+(cvb$>=0?'+':'')+fmtN(cvb$)+' units</span>','var(--accent)'),
+    buildCard('Forecast (EOM)',fmtN(cf,0),{txt:fmtPct(cfP)+' vs Budget',cls:pctClass(cfP)},Math.min(100,(cf/cb)*100),'#4fc3f7',fp+(cf-cb>=0?'+':'')+fmtN(cf-cb,0)+'</span>','#4fc3f7'),
+  ].join('');
+
+  document.getElementById('aroGrid').innerHTML=[
+    buildCard('ARO Budget',fmt$(arob),{txt:'100% Target',cls:'pct-blue'},100,'var(--accent3)','','var(--accent3)'),
+    buildCard('Actual ARO',fmt$(aroa),{txt:fmtPct(avbP)+' vs Budget',cls:pctClass(avbP)},apP,'var(--accent)',fp+(avb$>=0?'+':'')+fmt$(avb$)+'/RO</span>','var(--accent)',apP>=100?'card-hero':''),
+  ].join('');
+
+  const hg=document.getElementById('hoursGrid');
+  hg.innerHTML=[
+    buildCard('Budget Hours',fmtN(bh),{txt:'100% Target',cls:'pct-blue'},100,'var(--accent3)','','var(--accent3)'),
+    buildCard('Hours Worked',fmtN(ah),{txt:fmtPct(eP-100)+' vs Budget',cls:pctClass(hvbP)},eP,'var(--accent)',fp+(hvb$>=0?'+':'')+fmtN(hvb$)+' hrs</span>','var(--accent)'),
+    buildCard('Hours Invoiced',fmtN(ih),{txt:fmtN(hiP,1)+'% of Worked',cls:hiP>=90?'pct-green':hiP>=75?'pct-orange':'pct-red'},hiP,hiP>=90?'var(--accent)':'var(--warn)',fp+fmtN(ih-ah)+' vs worked</span>',hiP>=90?'var(--accent)':'var(--warn)'),
+    buildCard('Avg Hourly Rate',fmt$(ahr),{txt:fmtPct(rvbrP)+' vs Budget',cls:pctClass(rvbrP)},Math.min(100,(ahr/(br||1))*100),'var(--accent)',fp+'Bud: '+fmt$(br)+'/hr</span>','var(--accent)'),
+  ].join('');
+
+  let lcRow=document.getElementById('lcRow');
+  if(!lcRow){lcRow=document.createElement('div');lcRow.id='lcRow';lcRow.className='grid-2';lcRow.style.marginTop='10px';hg.after(lcRow);}
+  lcRow.innerHTML=[
+    buildCard('Total Labour Cost',fmt$(lc),{txt:`${fmt$(lc/(ih||1))} eff/hr`,cls:'pct-orange'},Math.min(100,(lc/rb)*100),'var(--accent2)',fp+fmtN((lc/ra)*100,1)+'% of Rev</span>','var(--accent2)'),
+    buildCard('Inv Efficiency',fmtN(hiP,1)+'%',{txt:fmtN(ih)+' inv / '+fmtN(ah)+' worked',cls:hiP>=90?'pct-green':'pct-orange'},hiP,hiP>=90?'var(--accent)':'var(--warn)',fp+'Rate: '+fmt$(lc/(ih||1))+'/hr</span>',hiP>=90?'var(--accent)':'var(--warn)'),
+  ].join('');
+
+  const rows=[
+    {l:'Revenue',b:fmt$(rb),a:fmt$(ra),f:fmt$(rf),p:rvbP},
+    {l:'Daily Rev (Avg)',b:fmt$(rdb),a:fmt$(rda),f:'—',p:rdb>0?((rda-rdb)/rdb)*100:0},
+    {l:'Car Count',b:fmtN(cb),a:fmtN(ca),f:fmtN(cf,0),p:cvbP},
+    {l:'ARO',b:fmt$(arob),a:fmt$(aroa),f:'—',p:avbP},
+    {l:'Sched Hours',b:fmtN(bh),a:fmtN(ah),f:'—',p:hvbP},
+    {l:'Inv Hours',b:fmtN(bh),a:fmtN(ih),f:'—',p:bh>0?((ih-bh)/bh)*100:0},
+    {l:'Hourly Rate',b:fmt$(br),a:fmt$(ahr),f:'—',p:rvbrP},
+    {l:'Labour Cost',b:'—',a:fmt$(lc),f:'—',p:ra>0?(lc/ra)*100:0,cost:true},
+  ];
+  document.getElementById('summaryBody').innerHTML=rows.map(r=>{
+    const c=r.cost?pctClass(r.p,true):pctClass(r.p);
+    const pt=r.cost?fmtN(r.p,1)+'% Rev':fmtPct(r.p);
+    return `<tr><td class="td-label">${r.l}</td><td class="td-val" style="color:var(--accent3)">${r.b}</td><td class="td-val">${r.a}</td><td class="td-val" style="color:var(--accent3);opacity:.7">${r.f}</td><td class="td-pct ${c}">${pt}</td><td>${r.cost?'—':statusBadge(r.p)}</td></tr>`;
+  }).join('');
+
+  const op=rvbP*0.5+cvbP*0.3+avbP*0.2;
+  const ob=document.getElementById('overallBadge');
+  if(op>=5){ob.className='badge badge-exceeded';ob.innerHTML='<span class="dot"></span> EXCEEDED';}
+  else if(op>=-5){ob.className='badge badge-on-track';ob.innerHTML='<span class="dot"></span> ON TRACK';}
+  else if(op>=-15){ob.className='badge badge-at-risk';ob.innerHTML='<span class="dot"></span> AT RISK';}
+  else{ob.className='badge badge-behind';ob.innerHTML='<span class="dot"></span> BEHIND';}
+  document.getElementById('lastCalc').textContent=new Date().toLocaleTimeString();
+  renderDailyTab(rb,ra,wd,de);
+}
+
+function renderDailyTab(rb,ra,wd,de){
+  const rdb=wd>0?rb/wd:0,rda=de>0?ra/de:0,dr=wd-de,rr=dr>0?(rb-ra)/dr:0,rf=de>0?rda*wd:0,dvbP=rdb>0?((rda-rdb)/rdb)*100:0;
+  document.getElementById('dailyHero').innerHTML=[
+    {label:'Avg Daily Generated',value:fmt$(rda),sub:`${fmtPct(dvbP)} vs daily budget`,subColor:dvbP>=0?'var(--accent)':'var(--danger)',top:'var(--accent)',hl:true},
+    {label:'Daily Budget',value:fmt$(rdb),sub:`${fmt$(rb)} / ${wd} days`,subColor:'var(--accent3)',top:'var(--accent3)'},
+    {label:'Daily Required (EOM)',value:fmt$(dr>0?rr:0),sub:`Over ${dr} remaining`,subColor:rr>rdb*1.3?'var(--danger)':rr>rdb?'var(--warn)':'var(--accent)',top:rr>rdb*1.3?'var(--danger)':'var(--warn)'},
+    {label:'EOM Forecast',value:fmt$(rf),sub:`${fmtPct(rb>0?((rf-rb)/rb)*100:0)} vs budget`,subColor:rf>=rb?'var(--accent)':'var(--accent2)',top:'#4fc3f7'},
+  ].map(h=>`<div class="daily-big-card ${h.hl?'highlight':''}" style="--card-top:${h.top}"><div class="dbc-label">${h.label}</div><div class="dbc-value" style="${h.hl?'color:var(--accent)':''}">${h.value}</div><div class="dbc-sub" style="color:${h.subColor}">${h.sub}</div></div>`).join('');
+  const mx=Math.max(rdb,rda,rr,1),toH=v=>Math.max(2,Math.min(100,(v/mx)*100));
+  let bars='';
+  for(let d=1;d<=wd;d++){
+    const ip=d<=de,it=d===de,if2=d>de;
+    const bh2=toH(rdb),ah2=ip?toH(rda):0,rh=if2?toH(rr):0;
+    const ac=rda>=rdb?'var(--accent)':'var(--accent2)';
+    bars+=`<div class="bar-col" title="Day ${d}"><div class="bar-budget" style="height:${bh2}%"></div>${ip?`<div class="bar-actual" style="height:${ah2}%;background:${ac};${it?'box-shadow:0 0 6px rgba(0,229,176,0.5)':''}"></div>`:''}${if2?`<div class="bar-actual" style="height:${rh}%;background:rgba(0,229,176,0.12);border:1px dashed rgba(0,229,176,0.35);width:100%;left:0;"></div>`:''}<span class="bar-day-label">${d}</span></div>`;
+  }
+  document.getElementById('dailyBarChart').innerHTML=bars;
+  let rows='';
+  for(let d=1;d<=wd;d++){
+    const ip=d<=de,it=d===de,if2=d>de;
+    const cb2=rdb*d,da=ip?fmt$(rda):if2?`<span style="color:var(--muted)">${fmt$(rr)}</span>`:'—';
+    const diff=ip?rda-rdb:null,dc=diff!==null?`<span style="color:${diff>=0?'var(--accent)':'var(--danger)'}">${diff>=0?'+':''}${fmt$(diff)}</span>`:'<span style="color:var(--muted)">—</span>';
+    const pp=ip&&rdb>0?Math.min(130,(rda/rdb)*100):0,pc=rda>=rdb?'var(--accent)':'var(--accent2)';
+    const pb=ip?`<div class="pace-bar-wrap"><div class="pace-bar-track"><div class="pace-bar-fill" style="width:${pp}%;background:${pc}"></div></div></div>`:'—';
+    rows+=`<tr class="${it?'today-row':''}"><td style="color:${it?'var(--accent)':'var(--label)'}">${d}${it?' <span style="font-size:8px;background:rgba(0,229,176,0.1);border:1px solid rgba(0,229,176,0.2);border-radius:3px;padding:1px 4px;color:var(--accent)">NOW</span>':''}</td><td style="color:var(--accent3)">${fmt$(cb2)}</td><td style="color:var(--text)">${ip?fmt$(rda*d):'<span style="color:var(--muted)">—</span>'}</td><td>${da}</td><td>${dc}</td><td>${pb}</td></tr>`;
+  }
+  document.getElementById('dailyTableBody').innerHTML=rows;
+}
+
+function updateSettingsScreen(){
+  const wd=getVal('workDays')||25,de=getVal('daysElapsed')||0;
+  document.getElementById('settingsMonth').textContent=`${MONTHS[currentMonth]} ${currentYear}`;
+  document.getElementById('settingsWorkDays').textContent=wd+' days';
+  document.getElementById('settingsElapsed').textContent=de+' days';
+  document.getElementById('settingsRemaining').textContent=Math.max(0,wd-de)+' days';
+  const saved=loadData();
+  document.getElementById('settingsLastSaved').textContent=saved?._savedAt?new Date(saved._savedAt).toLocaleString():'Never';
+  const ls=localStorage.getItem('smLastSync');
+  if(ls){document.getElementById('smLastSync').textContent='Last sync: '+ls;document.getElementById('smConnectedBadge').style.display='inline-flex';}
+}
+
+// ── INIT ─────────────────────────────────────────────────────────────────
+setDefaults();
+document.getElementById('monthDisplay').textContent=`${MONTHS[currentMonth].slice(0,3).toUpperCase()} ${currentYear}`;
+calculate();
+
+// Auto-sync on load
+window.addEventListener('load', () => setTimeout(syncFromShopMonkey, 800));
+</script>
+</body>
+</html>
